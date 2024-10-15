@@ -32,3 +32,10 @@
 /Users/hasinsadique/Projects/UTS/DotNet Dev/myfirstapi/obj/Debug/net8.0/myfirstapi.genruntimeconfig.cache
 /Users/hasinsadique/Projects/UTS/DotNet Dev/myfirstapi/obj/Debug/net8.0/ref/myfirstapi.dll
 /Users/hasinsadique/Projects/UTS/DotNet Dev/myfirstapi/bin/Debug/net8.0/Npgsql.dll
+/Users/hasinsadique/Projects/UTS/DotNet Dev/myfirstapi/bin/Debug/net8.0/Microsoft.Extensions.Configuration.FileExtensions.dll
+/Users/hasinsadique/Projects/UTS/DotNet Dev/myfirstapi/bin/Debug/net8.0/Microsoft.Extensions.Configuration.Json.dll
+/Users/hasinsadique/Projects/UTS/DotNet Dev/myfirstapi/obj/Debug/net8.0/myfirstapi.sourcelink.json
+/Users/hasinsadique/Projects/UTS/DotNet Dev/myfirstapi/bin/Debug/net8.0/Microsoft.EntityFrameworkCore.dll
+/Users/hasinsadique/Projects/UTS/DotNet Dev/myfirstapi/bin/Debug/net8.0/Microsoft.EntityFrameworkCore.Abstractions.dll
+/Users/hasinsadique/Projects/UTS/DotNet Dev/myfirstapi/bin/Debug/net8.0/Microsoft.EntityFrameworkCore.Relational.dll
+/Users/hasinsadique/Projects/UTS/DotNet Dev/myfirstapi/bin/Debug/net8.0/Npgsql.EntityFrameworkCore.PostgreSQL.dll
