@@ -9,10 +9,16 @@ namespace myfirstapi.Model
     {
         int UID {get;set;}
         string? Fullname {get;set;}
-        string? Email {get;set;}
+        public string? Email {get;set;}
         string? Phone {get;set;}
-        DateOnly DOB {get;set;}
+        string? Address {get;set;}
         string? Role {get;set;}
         string? Password {get;set;}
+
+        // public void makeMasterChef();
+        // public void rateRecipe();
+
+
+
     }
 }
