@@ -1,6 +1,21 @@
-@myfirstapi_HostAddress = http://localhost:5076
+POST http://localhost:5076/signup HTTP/1.1
+content-type: application/json
 
-GET {{myfirstapi_HostAddress}}/
-Accept: application/json
+{
+    "Fullname": "Hasin",
+    "Email":"ammi@gmail.com",
+    "Phone":"6788",
+    "Address":"36 Green Road",
+    "Password": "123456",
+    "Role": "Chef"
+}
 
+###
+POST http://localhost:5076/signin HTTP/1.1
+content-type: application/json
+
+{
+    "Email":"hasin@gmail.com",
+    "Password": "1234567"
+}
 ###

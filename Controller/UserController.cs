@@ -1,18 +1,39 @@
-using System;
-using System.Collections.Generic;
+using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace myfirstapi.Controller
+[ApiController]
+[Route("api/[controller]")]
+public class UsersController : ControllerBase
 {
-    public class UserController
+    private readonly ApplicationDbContext _context;
+
+    public UsersController(ApplicationDbContext context)
     {
-        public int Id { get; set; }
-        public string? FullName { get; set; }
-        public string? Email { get; set; }
-        public string? Phone { get; set; }
-        public string? DOB { get; set; }
-        public string? Role { get; set; }
-        public string? Password { get; set; }
+        _context = context;
+    }
+    
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetUserById(int id)
+    {
+        // Fetch user data from the database
+        var user = await _context.Users.FindAsync(id);
+        
+        if (user == null)
+        {
+            return NotFound(); // Return 404 if user not found
+        }
+        
+        // Return the user data in JSON format
+        return Ok(new
+        {
+            UID = user.UID,
+            Fullname = user.Fullname,
+            Email = user.Email,
+            Phone = user.Phone,
+            Address = user.Address,
+            Password = user.Password,
+            Role = user.Role
+        });
     }
 }
