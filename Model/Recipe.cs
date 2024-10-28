@@ -8,5 +8,6 @@ namespace myfirstapi.Model
         public string? Description {get;set;}
         public int Likes {get;set;}
         public bool IsVerified {get;set;}
+        public int Rating {get;set;}
     }
 }

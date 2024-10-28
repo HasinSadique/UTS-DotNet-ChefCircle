@@ -6,12 +6,22 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddCors(Options =>{
     Options.AddDefaultPolicy(builder=> {
         builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
-builder.WebHost.UseUrls("http://*:5076");
+// builder.WebHost.UseUrls("http://*:5076");
+// Configure Kestrel
+builder.WebHost.UseKestrel(options =>
+{
+    options.ListenAnyIP(5076); // HTTP port
+    options.ListenAnyIP(7262, listenOptions => // HTTPS port
+    {
+        listenOptions.UseHttps(); // Use default HTTPS setup
+    });
+});
 
 var app = builder.Build();
 app.UseCors();
@@ -84,6 +94,67 @@ async Task<bool> ValidateUserByUID(int? UID)
 
 try
 {
+    app.MapPut("/update-userdetails", async (User user) => 
+    {
+    // app.MapPut("/promoteuser", async (User user) =>
+        
+        
+        int UID=user.UID;
+        string Address=user.Address;
+        string Phone=user.Phone;
+        string PhotoURL=user.PhotoURL;
+
+        
+        Console.WriteLine("My User ID: "+ UID);
+        Console.WriteLine("My User Address: "+ Address);
+        Console.WriteLine("My User Phone: "+ Phone);
+        Console.WriteLine("My User Pic: "+ PhotoURL);
+        bool isValid = await ValidateUserByUID(user.UID);
+
+        bool success=false;
+        int status = 404;
+        string msg="";
+        int result=0;
+
+        if(Address!=null && Phone!=null && PhotoURL!=null){
+             string query = @"UPDATE public.users SET ""Phone"" = @Phone, ""Address"" = @Address, ""PhotoURL"" = @PhotoURL WHERE ""UID"" = @UID";
+            await using var command = new NpgsqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@UID", user.UID);
+            command.Parameters.AddWithValue("@Phone", Phone);
+            command.Parameters.AddWithValue("@Address", Address);
+            command.Parameters.AddWithValue("@PhotoURL", PhotoURL);
+
+            int rowsAffected = await command.ExecuteNonQueryAsync();
+            if (rowsAffected > 0)
+            {
+                success = true;
+                status = 200;
+                msg = "User details updated suceffully.";
+                result = rowsAffected;
+            }else{
+                success = false;
+                status = 400;
+                msg = "User details could not be updated.";
+                result = rowsAffected;
+            }
+        }else{
+
+            success=false;
+            status=404;
+            result=0;
+            msg="Could not update user info. Call Developer!!" ;
+        }
+          var response = new
+            {
+                success = success,
+                status = status,
+                result = result,
+                msg = msg
+            };
+        return Results.Json(response);                
+    
+    });
 
     app.MapPost("/addRecipe", async (Recipe recipe) =>
     {
@@ -117,7 +188,7 @@ try
 
             }
 
-            string query = @"INSERT INTO public.recipes( ""UID"",""Title"", ""Description"", ""Likes"",""IsVerified"") VALUES ( @UID,@Title, @Description,@Likes,@IsVerified) RETURNING ""RID""";
+            string query = @"INSERT INTO public.recipes( ""UID"",""Title"", ""Description"", ""Likes"",""IsVerified"",""Rating"") VALUES ( @UID,@Title, @Description,@Likes,@IsVerified,0) RETURNING ""RID""";
             await using var command = new NpgsqlCommand(query, connection);
 
             command.Parameters.AddWithValue("@UID", UID ?? (object)DBNull.Value);
@@ -201,9 +272,12 @@ try
                 };
                 return Results.Json(response);
             }
-            string query = @"UPDATE public.recipes SET ""IsVerified"" = true WHERE ""RID"" = ""RID""";
+            // string query = @"UPDATE public.recipes SET ""IsVerified"" = true WHERE ""RID"" = ""RID""";
+            string query = $"update public.recipes SET \"IsVerified\" = @value WHERE \"RID\" = @RID";
             await using var command = new NpgsqlCommand(query, connection);
 
+            command.Parameters.AddWithValue("@value", true);
+            command.Parameters.AddWithValue("@RID", RID);
             // command.Parameters.AddWithValue("@Title", Title);
             // command.Parameters.AddWithValue("@Description", Description);
 
@@ -228,11 +302,92 @@ try
         catch (Exception ex)
         {
             Console.WriteLine($"Error: {ex.Message}");
-            return Results.Problem("An error occurred while updating the recipe.");
+            return Results.Problem("An error occurred while updating the recipe. In approve post.");
         }
 
     });
+    app.MapPut("/addrating", async (Recipe recipe ) =>{
+        try
+        {
+            int? RID = recipe.RID;
+            int? Rate=recipe.Rating;
 
+            bool success = false;
+            int status = 401;
+            string msg = "";
+            int result = 0;
+
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync();
+
+            string query = $"update public.recipes SET \"Rating\" = @Rate WHERE \"RID\" = @RID";
+            await using var command = new NpgsqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@Rate", Rate);
+            command.Parameters.AddWithValue("@RID", RID);
+
+            int rowsAffected = await command.ExecuteNonQueryAsync();
+            if (rowsAffected > 0)
+            {
+                success = true;
+                status = 200;
+                msg = "Recipe rated suceffully.";
+                result = 0;
+            }
+            var response1 = new
+            {
+                success = success,
+                status = status,
+                result = result,
+                msg = msg
+            };
+            return Results.Json(response1);
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            return Results.Problem("An error occurred while rating the recipe.");
+        }
+    });
+   
+   app.MapDelete("/getrating/{rid:int}", async (int rid) =>
+    {
+        Console.WriteLine("My RID is >>> " + rid);
+
+        int? RID = rid;
+
+            bool success = false;
+            int status = 401;
+            string msg = "";
+            int result = 0;
+
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync();
+
+            string query = $"select \"Rating\" FRom public.recipes WHERE \"RID\" = @RID";
+            await using var command = new NpgsqlCommand(query, connection);
+
+            // command.Parameters.AddWithValue("@Rate", Rate);
+            command.Parameters.AddWithValue("@RID", RID);
+
+            int rowsAffected = await command.ExecuteNonQueryAsync();
+            if (rowsAffected > 0)
+            {
+                success = true;
+                status = 200;
+                msg = "Recipe rated suceffully.";
+                result = 0;
+            }
+            var response1 = new
+            {
+                success = success,
+                status = status,
+                result = result,
+                msg = msg
+            };
+            return Results.Json(response1);
+    });
 
     app.MapPut("/promoteuser", async (User user) =>
     {
@@ -354,7 +509,7 @@ try
             int? RID = comment.RID;  // Recipe ID for which the comment is being added
             int? UID = comment.UID;  // User ID of the person adding the comment
             string? Comm = comment.Comment;  // Comment 
-            Console.WriteLine("Comment", Comm);
+            Console.WriteLine("Comment"+ Comm);
             // Set up the response variables
             bool success = false;
             int status = 401;  // Default to 401 Unauthorized, assuming failure
@@ -416,13 +571,6 @@ try
         Console.WriteLine(id);
         try
         {
-            // if (id == null)
-            // {
-            //     // Return an error if RID is missing
-            //     return Results.BadRequest(new { Message = "Recipe ID (RID) is required." });
-            // }
-            Console.WriteLine("RID: >> ",id);
-            // Create a new connection for this request
             await using var connection = new NpgsqlConnection(connectionString);
             await connection.OpenAsync();
 
@@ -471,71 +619,151 @@ try
         }
     });
 
-    // app.MapDelete("/deletepost", async (int rid) =>
-    // {
-    //     // int rid=recipe.RID;
-    //     Console.WriteLine("My RID is >>> "+rid);
+    app.MapDelete("/deletepost/{rid:int}", async (int rid) =>
+    {
+        // int rid=recipe.RID;
+        Console.WriteLine("My RID is >>> "+rid);
 
-    //     try
-    //     {
-    //         Console.WriteLine("My RID >> "+rid);
-    //         bool success = false;
-    //         int status = 404;  // Default to not found
-    //         string msg = "Recipe not found";
-    //         int result = 0;
+        try
+        {
+        //     Console.WriteLine("My RID >> "+rid);
+            bool success = false;
+            int status = 404;  // Default to not found
+            string msg = "Recipe not found";
+            int result = 0;
 
-    //         // Check if recipe exists
-    //         string validateQuery = @"SELECT COUNT(*) FROM public.recipes WHERE ""RID"" = @RID";
-    //         await using var validateCmd = new NpgsqlCommand(validateQuery, connection);
-    //         validateCmd.Parameters.AddWithValue("@RID", rid);
+            // Create a new connection for this request
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync();
 
-    //         var count = await validateCmd.ExecuteScalarAsync();
-    //         bool recipeExists = Convert.ToInt32(count) > 0;
+        //     // Check if recipe exists
+            string validateQuery = @"SELECT COUNT(*) FROM public.recipes WHERE ""RID"" = @RID";
+            await using var validateCmd = new NpgsqlCommand(validateQuery, connection);
+            validateCmd.Parameters.AddWithValue("@RID", rid);
 
-    //         if (!recipeExists)
-    //         {
-    //             return Results.NotFound(new
-    //             {
-    //                 success = success,
-    //                 status = status,
-    //                 result = result,
-    //                 msg = msg
-    //             });
-    //         }
+            var count = await validateCmd.ExecuteScalarAsync();
+            bool recipeExists = Convert.ToInt32(count) > 0;
 
-    //         // Delete the recipe
-    //         string deleteQuery = @"DELETE FROM public.recipes WHERE ""RID"" = @RID";
-    //         await using var deleteCmd = new NpgsqlCommand(deleteQuery, connection);
-    //         deleteCmd.Parameters.AddWithValue("@RID", rid);
+            if (!recipeExists)
+            {
+                return Results.NotFound(new
+                {
+                    success = success,
+                    status = status,
+                    result = result,
+                    msg = msg
+                });
+            }
 
-    //         int rowsAffected = await deleteCmd.ExecuteNonQueryAsync();
+        //     // Delete the recipe
+            string deleteQuery = @"DELETE FROM public.recipes WHERE ""RID"" = @RID";
+            await using var deleteCmd = new NpgsqlCommand(deleteQuery, connection);
+            deleteCmd.Parameters.AddWithValue("@RID", rid);
 
-    //         if (rowsAffected > 0)
-    //         {
-    //             success = true;
-    //             status = 200;
-    //             msg = "Recipe deleted successfully";
-    //             result = rowsAffected;
-    //         }
+            int rowsAffected = await deleteCmd.ExecuteNonQueryAsync();
 
-    //         return Results.Ok(new
-    //         {
-    //             success = success,
-    //             status = status,
-    //             result = result,
-    //             msg = msg
-    //         });
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         Console.WriteLine($"Error deleting recipe: {ex.Message}");
-    //         return Results.Problem(
-    //             title: "Internal Server Error",
-    //             detail: "An error occurred while deleting the recipe",
-    //             statusCode: 500
-    //         );
-    //     }
-    // });
+            if (rowsAffected > 0)
+            {
+                success = true;
+                status = 200;
+                msg = "Recipe deleted successfully";
+                result = rowsAffected;
+            }
+
+            return Results.Ok(new
+            {
+                success = success,
+                status = status,
+                result = result,
+                msg = msg
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting recipe: {ex.Message}");
+            return Results.Problem(
+                title: "Internal Server Error",
+                detail: "An error occurred while deleting the recipe",
+                statusCode: 500
+            );
+        }
+    });
+
+    // app.MapPut("/changepassword", async(int UID,string OldPass, string NewPass)=>{
+    app.MapPut("/changepassword", async(HttpContext httpContext)=>{
+    // *********************************** Code below to get data from http context request body **********************************************************
+        using var reader = new System.IO.StreamReader(httpContext.Request.Body);
+        var body = await reader.ReadToEndAsync();
+        // Parse the JSON
+        var jsonData = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(body);
+        // Extract data from body using anticipated variable
+        if (!jsonData.TryGetProperty("UID", out JsonElement uidElement) || 
+            !jsonData.TryGetProperty("OldPass", out JsonElement oldPassElement) || 
+            !jsonData.TryGetProperty("NewPass", out JsonElement newPassElement))
+        {
+            return Results.BadRequest(new { Message = "Invalid request data in change password." });
+        }
+        // Save the data for processing.
+        int UID =  uidElement.GetInt32();
+        string OldPass = oldPassElement.GetString();
+        string NewPass = newPassElement.GetString();
+    // *********************************** Code below to get data from http context request body **********************************************************
+        
+        Console.WriteLine($"\n\nUID: {UID}\nOldPass: {OldPass}\nNewPass: {NewPass}");
+        
+        // Execute logic using the request body data.
+        try
+        {
+            int? UserID = UID;
+            bool success = false;
+            int status = 401;
+            string msg = "";
+            int result = 0;
+
+            string query = @"UPDATE public.users SET ""Password"" = @NewPass WHERE ""UID"" = @UserID AND ""Password"" = @OldPass" ;
+            await using var command = new NpgsqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@UserID", UserID);
+            command.Parameters.AddWithValue("@NewPass", NewPass);
+            command.Parameters.AddWithValue("@OldPass", OldPass);
+
+            int rowsAffected = await command.ExecuteNonQueryAsync();
+            if (rowsAffected > 0)
+            {
+                success = true;
+                status = 200;
+                msg = "Password changed suceffully.";
+                result = 1;
+            }else{
+                msg="Cannot change to new password. Check old password!";
+            }
+            var response1 = new
+            {
+                success = success,
+                status = status,
+                result = result,
+                msg = msg
+            };
+            return Results.Json(response1);
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            return Results.Problem("An error occurred while changing the password.");
+        }
+
+        // */
+        // var response1 = new
+        //     {
+        //         success = false,
+        //         status = 200,
+        //         result = 0,
+        //         msg = "Lame "
+        //     };
+        //     return Results.Json(response1);
+    });
+
 
 
     app.MapGet("/",  async() =>
@@ -546,7 +774,7 @@ try
         
         // Execute the command and read the result
         using var reader = await command.ExecuteReaderAsync();
-        Console.WriteLine("reader >>>> \n "+reader);
+        // Console.WriteLine("reader >>>> \n "+reader);
 
         // Prepare a list to hold the rows in a form of a dictionary
         var results = new List<Dictionary<string, object>>();

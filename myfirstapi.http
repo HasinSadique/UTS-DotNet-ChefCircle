@@ -19,3 +19,16 @@ content-type: application/json
     "Password": "1234567"
 }
 ###
+
+POST https://localhost:7262/getallcomments/22 HTTP/1.1
+content-type: application/json
+###
+PUT https://localhost:7262/update-userdetails HTTP/1.1
+content-type: application/json
+
+{
+    "UID":2,
+    "Address":"123456",
+    "Phone":"1234567",
+    "PhotoURL":"url"
+}
