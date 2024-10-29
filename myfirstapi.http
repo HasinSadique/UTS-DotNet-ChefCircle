@@ -20,9 +20,11 @@ content-type: application/json
 }
 ###
 
-POST https://localhost:7262/getallcomments/22 HTTP/1.1
+GET https://localhost:7262/getallcomments/31 HTTP/1.1
 content-type: application/json
 ###
+
+
 PUT https://localhost:7262/update-userdetails HTTP/1.1
 content-type: application/json
 

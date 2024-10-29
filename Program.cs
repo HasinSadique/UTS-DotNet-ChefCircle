@@ -568,7 +568,7 @@ try
 
     app.MapGet("/getallcomments/{id:int}", async(int id) =>
     {
-        Console.WriteLine(id);
+        Console.WriteLine("RID: "+id);
         try
         {
             await using var connection = new NpgsqlConnection(connectionString);
